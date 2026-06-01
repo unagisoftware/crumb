@@ -1,0 +1,17 @@
+# Bundler
+*.lock
+.bundle/
+
+# Temp files
+tmp/
+*.tmp
+
+# Test databases
+engine/test/dummy/storage/
+
+# Logs
+log/
+*.log
+
+# OS
+.DS_Store

@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DEST="${KAMAL_DESTINATION:-production}"
+DEST_UPPER=$(echo "$DEST" | tr '[:lower:]' '[:upper:]')
+API_URL_VAR="CRUMB_API_URL_${DEST_UPPER}"
+SECRET_VAR="CRUMB_INGEST_SECRET_${DEST_UPPER}"
+API_URL="${!API_URL_VAR}"
+SECRET="${!SECRET_VAR}"
+
+if [[ -z "$API_URL" || -z "$SECRET" ]]; then
+  exit 0
+fi
+
+TMP="/tmp/crumb_${KAMAL_VERSION}.tmp"
+if [[ ! -f "$TMP" ]]; then
+  echo "Crumb: no pre-deploy record found for $KAMAL_VERSION — skipping" >&2
+  exit 0
+fi
+read -r DEPLOY_ID PREVIOUS_SHA < "$TMP"
+rm -f "$TMP"
+
+if [[ "$KAMAL_COMMAND" == "rollback" ]]; then
+  COMMITS="[]"
+  CHANGED_FILES="[]"
+  KIND="rollback"
+else
+  KIND="deploy"
+  if [[ -n "$PREVIOUS_SHA" && "$PREVIOUS_SHA" != "$KAMAL_VERSION" ]]; then
+    COMMITS=$(git log --format='{"sha":"%H","author":"%ae","message":"%s","committed_at":"%aI"}' \
+              "${PREVIOUS_SHA}..${KAMAL_VERSION}" \
+      | ruby -e 'lines=($stdin.read.strip.split("\n")); puts "["+lines.join(",")+"]"')
+    CHANGED_FILES=$(git diff --name-status "${PREVIOUS_SHA}..${KAMAL_VERSION}" \
+      | ruby -e '
+          rows = $stdin.read.strip.lines.map do |line|
+            t, p = line.chomp.split("\t", 2)
+            "{\"path\":\"#{p}\",\"change_type\":\"#{t[0]}\"}"
+          end
+          puts "[" + rows.join(",") + "]"
+        ')
+  else
+    COMMITS="[]"
+    CHANGED_FILES="[]"
+  fi
+fi
+
+curl -sf -X PATCH "$API_URL/deploys/$DEPLOY_ID" \
+  -H "Authorization: Bearer $SECRET" \
+  -H "Content-Type: application/json" \
+  -d "{\"status\":\"success\",\"kind\":\"$KIND\",\"finished_at\":\"$KAMAL_RECORDED_AT\",\"duration_seconds\":$KAMAL_RUNTIME,\"commits\":$COMMITS,\"changed_files\":$CHANGED_FILES,\"metadata\":{\"kamal_command\":\"$KAMAL_COMMAND\",\"hosts\":\"$KAMAL_HOSTS\"}}"

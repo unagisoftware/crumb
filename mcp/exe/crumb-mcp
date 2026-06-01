@@ -1,0 +1,18 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+$LOAD_PATH.unshift(File.expand_path("../lib", __dir__))
+require "crumb/mcp"
+
+server = MCP::Server.new(
+  name:    "crumb",
+  version: Crumb::MCP::VERSION,
+  tools:   [
+    Crumb::MCP::Tools::RecentDeploysTool,
+    Crumb::MCP::Tools::DeployDetailsTool,
+    Crumb::MCP::Tools::CompareDeploysTool,
+    Crumb::MCP::Tools::FindDeploysTouchingTool
+  ]
+)
+
+MCP::Server::Transports::StdioTransport.new(server).open

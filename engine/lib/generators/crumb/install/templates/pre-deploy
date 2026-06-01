@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DEST="${KAMAL_DESTINATION:-production}"
+DEST_UPPER=$(echo "$DEST" | tr '[:lower:]' '[:upper:]')
+API_URL_VAR="CRUMB_API_URL_${DEST_UPPER}"
+SECRET_VAR="CRUMB_INGEST_SECRET_${DEST_UPPER}"
+API_URL="${!API_URL_VAR}"
+SECRET="${!SECRET_VAR}"
+
+if [[ -z "$API_URL" || -z "$SECRET" ]]; then
+  echo "Crumb: missing ${API_URL_VAR} or ${SECRET_VAR} — skipping deploy record" >&2
+  exit 0
+fi
+
+DIRTY=false
+if [[ "$KAMAL_VERSION" == *_uncommitted_* ]] || ! git diff --quiet || ! git diff --cached --quiet; then
+  if [[ "$DEST" == "production" ]]; then
+    echo "Crumb: dirty working tree — aborting production deploy" >&2
+    exit 1
+  fi
+  DIRTY=true
+fi
+
+UNPUSHED=false
+if ! git log "@{u}.." --oneline 2>/dev/null | grep -q .; then
+  : # up to date
+else
+  if [[ "$DEST" == "production" ]]; then
+    echo "Crumb: unpushed commits — aborting production deploy" >&2
+    exit 1
+  fi
+  UNPUSHED=true
+fi
+
+METADATA="{\"dirty\":$DIRTY,\"unpushed\":$UNPUSHED}"
+BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+
+RESPONSE=$(curl -sf -X POST "$API_URL/deploys" \
+  -H "Authorization: Bearer $SECRET" \
+  -H "Content-Type: application/json" \
+  -d "{\"sha\":\"$KAMAL_VERSION\",\"branch\":\"$BRANCH\",\"author\":\"$KAMAL_PERFORMER\",\"started_at\":\"$KAMAL_RECORDED_AT\",\"metadata\":$METADATA}")
+
+DEPLOY_ID=$(echo "$RESPONSE" | ruby -rjson -e 'puts JSON.parse($stdin.read)["deploy_id"]')
+PREVIOUS_SHA=$(echo "$RESPONSE" | ruby -rjson -e 'puts JSON.parse($stdin.read)["previous_sha"].to_s')
+
+echo "$DEPLOY_ID $PREVIOUS_SHA" > "/tmp/crumb_${KAMAL_VERSION}.tmp"

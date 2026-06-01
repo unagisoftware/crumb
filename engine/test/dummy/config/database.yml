@@ -1,0 +1,15 @@
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  host: localhost
+  port: 5432
+  username: galtequito
+  password: galtequito
+
+development:
+  <<: *default
+  database: crumb_dummy_development
+
+test:
+  <<: *default
+  database: crumb_dummy_test
