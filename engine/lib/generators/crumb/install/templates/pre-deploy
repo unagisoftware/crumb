@@ -39,9 +39,12 @@ BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 RESPONSE=$(curl -sf -X POST "$API_URL/deploys" \
   -H "Authorization: Bearer $SECRET" \
   -H "Content-Type: application/json" \
-  -d "{\"sha\":\"$KAMAL_VERSION\",\"branch\":\"$BRANCH\",\"author\":\"$KAMAL_PERFORMER\",\"started_at\":\"$KAMAL_RECORDED_AT\",\"metadata\":$METADATA}")
+  -d "{\"sha\":\"$KAMAL_VERSION\",\"branch\":\"$BRANCH\",\"author\":\"$KAMAL_PERFORMER\",\"started_at\":\"$KAMAL_RECORDED_AT\",\"metadata\":$METADATA}" 2>/dev/null) || {
+  echo "Crumb: failed to open deploy record — skipping" >&2
+  exit 0
+}
 
-DEPLOY_ID=$(echo "$RESPONSE" | ruby -rjson -e 'puts JSON.parse($stdin.read)["deploy_id"]')
-PREVIOUS_SHA=$(echo "$RESPONSE" | ruby -rjson -e 'puts JSON.parse($stdin.read)["previous_sha"].to_s')
+DEPLOY_ID=$(echo "$RESPONSE" | ruby -rjson -e 'puts JSON.parse($stdin.read)["deploy_id"]' 2>/dev/null) || { echo "Crumb: unexpected response — skipping" >&2; exit 0; }
+PREVIOUS_SHA=$(echo "$RESPONSE" | ruby -rjson -e 'puts JSON.parse($stdin.read)["previous_sha"].to_s' 2>/dev/null || echo "")
 
 echo "$DEPLOY_ID $PREVIOUS_SHA" > "/tmp/crumb_${KAMAL_VERSION}.tmp"

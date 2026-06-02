@@ -47,4 +47,5 @@ fi
 curl -sf -X PATCH "$API_URL/deploys/$DEPLOY_ID" \
   -H "Authorization: Bearer $SECRET" \
   -H "Content-Type: application/json" \
-  -d "{\"status\":\"success\",\"kind\":\"$KIND\",\"finished_at\":\"$KAMAL_RECORDED_AT\",\"duration_seconds\":$KAMAL_RUNTIME,\"commits\":$COMMITS,\"changed_files\":$CHANGED_FILES,\"metadata\":{\"kamal_command\":\"$KAMAL_COMMAND\",\"hosts\":\"$KAMAL_HOSTS\"}}"
+  -d "{\"status\":\"success\",\"kind\":\"$KIND\",\"finished_at\":\"$KAMAL_RECORDED_AT\",\"duration_seconds\":$KAMAL_RUNTIME,\"commits\":$COMMITS,\"changed_files\":$CHANGED_FILES,\"metadata\":{\"kamal_command\":\"$KAMAL_COMMAND\",\"hosts\":\"$KAMAL_HOSTS\"}}" 2>/dev/null \
+  || echo "Crumb: failed to close deploy record — skipping" >&2
