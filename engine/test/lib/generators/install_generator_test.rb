@@ -35,4 +35,35 @@ class InstallGeneratorTest < Rails::Generators::TestCase
       assert_match "PATCH", content
     end
   end
+
+  test "injects CRUMB_INGEST_SECRET into deploy ymls with top-level env.secret" do
+    FileUtils.mkdir_p File.join(destination_root, "config")
+    File.write File.join(destination_root, "config/deploy.production.yml"), <<~YAML
+      env:
+        secret:
+          - RAILS_MASTER_KEY
+    YAML
+
+    run_generator
+
+    assert_file "config/deploy.production.yml" do |content|
+      assert_match "CRUMB_INGEST_SECRET", content
+    end
+  end
+
+  test "skips deploy ymls that already have CRUMB_INGEST_SECRET" do
+    FileUtils.mkdir_p File.join(destination_root, "config")
+    File.write File.join(destination_root, "config/deploy.production.yml"), <<~YAML
+      env:
+        secret:
+          - CRUMB_INGEST_SECRET
+          - RAILS_MASTER_KEY
+    YAML
+
+    run_generator
+
+    assert_file "config/deploy.production.yml" do |content|
+      assert_equal 1, content.scan("CRUMB_INGEST_SECRET").length
+    end
+  end
 end
