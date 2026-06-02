@@ -2,6 +2,7 @@ module Crumb
   module MCP
     module Tools
       class RecentDeploysTool < ::MCP::Tool
+        tool_name "recent_deploys"
         description "List recent deployments. Omit `endpoint` to query all configured endpoints."
         input_schema(
           properties: {

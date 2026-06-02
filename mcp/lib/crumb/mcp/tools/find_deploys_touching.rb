@@ -2,6 +2,7 @@ module Crumb
   module MCP
     module Tools
       class FindDeploysTouchingTool < ::MCP::Tool
+        tool_name "find_deploys_touching"
         description "Find deploys that touched files matching a path prefix. Fast via indexed DB query."
         input_schema(
           properties: {

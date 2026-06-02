@@ -2,6 +2,7 @@ module Crumb
   module MCP
     module Tools
       class CompareDeploysTool < ::MCP::Tool
+        tool_name "compare_deploys"
         description "Union of commits and changed files between two deploys on the same endpoint."
         input_schema(
           properties: {

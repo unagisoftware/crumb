@@ -2,6 +2,7 @@ module Crumb
   module MCP
     module Tools
       class DeployDetailsTool < ::MCP::Tool
+        tool_name "deploy_details"
         description "Full detail for one deploy: commits, changed files, and optionally the git diff."
         input_schema(
           properties: {
