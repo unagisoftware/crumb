@@ -1,5 +1,7 @@
 require "faraday"
 require "json"
+require "shellwords"
+require "uri"
 
 module Crumb
   module MCP
