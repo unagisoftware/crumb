@@ -43,6 +43,7 @@ class RecentDeploysToolTest < Minitest::Test
       text   = result.content.first[:text]
       assert_match "[my-app]", text
       assert_match "abc123de", text
+      assert_match "#1", text # deploy id, needed to chain into deploy_details
     end
   end
 

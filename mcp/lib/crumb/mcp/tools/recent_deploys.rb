@@ -24,7 +24,7 @@ module Crumb
           def format_deploys(deploys)
             return "No deployments found." if deploys.empty?
             deploys.map do |d|
-              "[#{d["endpoint"]}] #{d["sha"][0, 8]} — #{d["branch"]} by #{d["author"]} " \
+              "[#{d["endpoint"]}] ##{d["id"]} #{d["sha"][0, 8]} — #{d["branch"]} by #{d["author"]} " \
                 "(#{d["status"]}, #{d["duration_seconds"]}s) #{d["finished_at"]} " \
                 "[#{d["commit_count"]} commits, #{d["changed_file_count"]} files]"
             end.join("\n")
