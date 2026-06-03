@@ -103,18 +103,20 @@ On other destinations it records the condition in the deploy's metadata instead.
 
 ## Read access tokens
 
-Read endpoints (used by `crumb-mcp`) require a per-developer access token. Mint one with:
+Read endpoints (used by `crumb-mcp`) require a per-developer access token. Tokens live in
+the deployed app's database, so mint them against the target environment with Kamal:
 
 ```bash
-bin/rails crumb:tokens:mint OWNER=you@example.com
+kamal app exec -d <env> "bin/rails crumb:tokens:mint OWNER=you@example.com"
 ```
 
 The raw token is printed **once** — only its SHA-256 digest is stored. Hand it to the MCP
-config (`token_env`) on the developer's machine. In a Kamal-deployed app, run it on a
-host, e.g.:
+config (`token_env`) on the developer's machine.
+
+Against a local/dev database, run the task directly:
 
 ```bash
-kamal app exec --destination staging "bin/rails crumb:tokens:mint OWNER=you@example.com"
+bin/rails crumb:tokens:mint OWNER=you@example.com
 ```
 
 ## HTTP API
