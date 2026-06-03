@@ -14,9 +14,20 @@ module Crumb
         class << self
           def call(endpoint: nil, limit: 20, server_context: nil)
             slugs   = endpoint ? [ endpoint ] : Registry.all_slugs
-            deploys = slugs.flat_map { |slug| ApiClient.for(slug).recent(limit: limit) }
+            deploys = []
+            errors  = []
+
+            slugs.each do |slug|
+              deploys.concat(ApiClient.for(slug).recent(limit: limit))
+            rescue => e
+              errors << "[#{slug}] error: #{e.message}"
+            end
+
             deploys.sort_by! { |d| d["finished_at"].to_s }.reverse!
-            ::MCP::Tool::Response.new([ { type: "text", text: format_deploys(deploys) } ])
+
+            text  = format_deploys(deploys)
+            text += "\n\n" + errors.join("\n") unless errors.empty?
+            ::MCP::Tool::Response.new([ { type: "text", text: text } ])
           end
 
           private

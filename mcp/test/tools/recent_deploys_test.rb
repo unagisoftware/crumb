@@ -47,6 +47,22 @@ class RecentDeploysToolTest < Minitest::Test
     end
   end
 
+  def test_one_failing_endpoint_does_not_blank_the_healthy_ones
+    failing = Object.new
+    def failing.recent(limit: 20) = raise(Crumb::MCP::ApiClient::Error, "HTTP 503")
+    clients = {
+      "app-a" => FakeClient.new([ fake_deploy("app-a") ]),
+      "app-b" => failing
+    }
+    stub_method(Crumb::MCP::Registry, :all_slugs, %w[app-a app-b]) do
+      stub_method(Crumb::MCP::ApiClient, :for, ->(slug) { clients[slug] }) do
+        text = Crumb::MCP::Tools::RecentDeploysTool.call.content.first[:text]
+        assert_match "[app-a]", text            # healthy endpoint still listed
+        assert_match "[app-b] error: HTTP 503", text # failing one surfaced, not fatal
+      end
+    end
+  end
+
   def test_returns_message_when_no_deploys_found
     stub_method(Crumb::MCP::Registry, :all_slugs, %w[my-app]) do
       stub_method(Crumb::MCP::ApiClient, :for, FakeClient.new([])) do
