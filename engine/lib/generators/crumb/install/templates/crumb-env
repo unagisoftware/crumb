@@ -18,6 +18,6 @@ esac
 CRUMB_INGEST_SECRET="${CRUMB_INGEST_SECRET:-}"
 
 if [[ -z "$CRUMB_INGEST_SECRET" ]]; then
-  echo "Crumb: CRUMB_INGEST_SECRET not set — skipping deploy record" >&2
-  exit 0
+  echo "Crumb: CRUMB_INGEST_SECRET not set — aborting deploy" >&2
+  exit 1
 fi

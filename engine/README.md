@@ -90,8 +90,10 @@ esac
 No destination is assumed: a `kamal deploy` without `-d` falls through to the `*)` branch
 and skips recording (non-fatal) rather than guessing.
 
-The hooks never block a deploy. If the secret is missing, the API is unreachable, or the
-response is unexpected, they log a notice and exit 0 — except the integrity guards below.
+A missing `CRUMB_INGEST_SECRET` aborts the deploy (exit 1) — once installed, recording is
+mandatory rather than silently skipped. Other conditions stay non-fatal: if the API is
+unreachable or returns an unexpected response, the hooks log a notice and exit 0, so a
+transient outage never blocks a deploy. See also the integrity guards below.
 
 ### Integrity guards (production)
 
