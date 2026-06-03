@@ -1,16 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DEST="${KAMAL_DESTINATION:-production}"
-DEST_UPPER=$(echo "$DEST" | tr '[:lower:]' '[:upper:]')
-API_URL_VAR="CRUMB_API_URL_${DEST_UPPER}"
-SECRET_VAR="CRUMB_INGEST_SECRET_${DEST_UPPER}"
-API_URL="${!API_URL_VAR}"
-SECRET="${!SECRET_VAR}"
-
-if [[ -z "$API_URL" || -z "$SECRET" ]]; then
-  exit 0
-fi
+source "$(dirname "$0")/crumb-env"
 
 TMP="/tmp/crumb_${KAMAL_VERSION}.tmp"
 if [[ ! -f "$TMP" ]]; then
@@ -44,8 +35,8 @@ else
   fi
 fi
 
-curl -sf -X PATCH "$API_URL/deploys/$DEPLOY_ID" \
-  -H "Authorization: Bearer $SECRET" \
+curl -sf -X PATCH "$CRUMB_API_URL/deploys/$DEPLOY_ID" \
+  -H "Authorization: Bearer $CRUMB_INGEST_SECRET" \
   -H "Content-Type: application/json" \
   -d "{\"status\":\"success\",\"kind\":\"$KIND\",\"finished_at\":\"$KAMAL_RECORDED_AT\",\"duration_seconds\":$KAMAL_RUNTIME,\"commits\":$COMMITS,\"changed_files\":$CHANGED_FILES,\"metadata\":{\"kamal_command\":\"$KAMAL_COMMAND\",\"hosts\":\"$KAMAL_HOSTS\"}}" 2>/dev/null \
   || echo "Crumb: failed to close deploy record — skipping" >&2

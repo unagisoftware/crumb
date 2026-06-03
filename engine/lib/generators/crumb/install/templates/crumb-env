@@ -1,0 +1,23 @@
+# Crumb hook configuration — sourced by crumb-pre-deploy and crumb-post-deploy.
+# This is the one file you edit. Set the Crumb API URL for each deploy destination.
+
+DEST="${KAMAL_DESTINATION:-}"
+
+# The Crumb API URL is the deployed app's /crumb mount. Add a line per Kamal destination.
+case "$DEST" in
+  production) CRUMB_API_URL="https://example.com/crumb" ;;
+  staging)    CRUMB_API_URL="https://staging.example.com/crumb" ;;
+  *) echo "Crumb: no API URL configured for destination '$DEST' — skipping" >&2; exit 0 ;;
+esac
+
+# CRUMB_INGEST_SECRET must match the app's Crumb.config.ingest_secret for this destination.
+# Export it before deploying, or fetch it from your secret manager here, keyed on $DEST.
+# Example (Bitwarden via Kamal):
+#   SECRETS=$(kamal secrets fetch --adapter bitwarden --account "$VAULT_EMAIL" --from "myapp-${DEST}" CRUMB_INGEST_SECRET)
+#   CRUMB_INGEST_SECRET=$(kamal secrets extract CRUMB_INGEST_SECRET "$SECRETS")
+CRUMB_INGEST_SECRET="${CRUMB_INGEST_SECRET:-}"
+
+if [[ -z "$CRUMB_INGEST_SECRET" ]]; then
+  echo "Crumb: CRUMB_INGEST_SECRET not set — skipping deploy record" >&2
+  exit 0
+fi
