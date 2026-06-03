@@ -43,6 +43,39 @@ class DeploysReadTest < ActionDispatch::IntegrationTest
     assert_equal 1, d["changed_file_count"]
   end
 
+  test "includes failed and running deploys, not just successes" do
+    Crumb::Deploy.create!(
+      sha: "fail1", branch: "main", author: "nico", kind: "deploy",
+      status: "failed", started_at: 30.minutes.ago, finished_at: 28.minutes.ago
+    )
+    Crumb::Deploy.create!(
+      sha: "run1", branch: "main", author: "nico", kind: "deploy",
+      status: "running", started_at: 5.minutes.ago
+    )
+
+    get "/crumb/deploys", headers: read_headers
+
+    assert_response :ok
+    statuses = JSON.parse(response.body)["deploys"].map { |d| d["status"] }
+    assert_includes statuses, "success"
+    assert_includes statuses, "failed"
+    assert_includes statuses, "running"
+  end
+
+  test "filters by status when given" do
+    Crumb::Deploy.create!(
+      sha: "fail1", branch: "main", author: "nico", kind: "deploy",
+      status: "failed", started_at: 30.minutes.ago, finished_at: 28.minutes.ago
+    )
+
+    get "/crumb/deploys?status=failed", headers: read_headers
+
+    assert_response :ok
+    deploys = JSON.parse(response.body)["deploys"]
+    assert_equal 1, deploys.length
+    assert_equal "failed", deploys.first["status"]
+  end
+
   test "filters by touching path prefix" do
     get "/crumb/deploys?touching=app/models/order", headers: read_headers
 

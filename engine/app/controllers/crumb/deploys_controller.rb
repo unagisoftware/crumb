@@ -3,7 +3,8 @@ module Crumb
     before_action :require_write_secret!, only: [ :create, :update ]
 
     def index
-      scope = Deploy.recent_successes.limit(params[:limit] || 20)
+      scope = Deploy.recent.limit(params[:limit] || 20)
+      scope = scope.where(status: params[:status]) if params[:status].present?
 
       if params[:touching].present?
         scope = scope

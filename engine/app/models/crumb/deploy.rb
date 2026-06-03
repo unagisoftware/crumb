@@ -11,6 +11,8 @@ module Crumb
     validates :kind,   inclusion: { in: VALID_KINDS }
     validates :status, inclusion: { in: VALID_STATUSES }
 
-    scope :recent_successes, -> { where(status: "success").order(finished_at: :desc) }
+    # finished_at DESC puts in-progress (running, null finished_at) deploys first in
+    # Postgres (NULLS FIRST), with id as a stable tiebreaker.
+    scope :recent, -> { order(finished_at: :desc, id: :desc) }
   end
 end
