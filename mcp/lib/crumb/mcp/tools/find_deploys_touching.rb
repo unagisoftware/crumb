@@ -32,7 +32,7 @@ module Crumb
                 "No deploys found touching '#{path_prefix}'."
               else
                 "Deploys touching '#{path_prefix}':\n\n" + deploys.map do |d|
-                  "[#{d["endpoint"]}] ##{d["id"]} #{d["sha"][0, 8]} by #{d["author"]} on #{d["finished_at"]}"
+                  "[#{d["endpoint"]}] ##{d["id"]} #{d["sha"].to_s[0, 8]} by #{d["author"]} on #{d["finished_at"]}"
                 end.join("\n")
               end
             text += "\n\n" + errors.join("\n") unless errors.empty?

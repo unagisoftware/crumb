@@ -10,11 +10,20 @@ Gem::Specification.new do |spec|
   spec.description = "Standalone MCP server that federates across Crumb-enabled endpoints and exposes deploy history as LLM tools."
   spec.license     = "MIT"
 
-  spec.files         = Dir["{lib,exe}/**/*"]
+  spec.required_ruby_version = ">= 3.0"
+
+  spec.metadata = {
+    "homepage_uri"          => spec.homepage,
+    "source_code_uri"       => "https://github.com/nicogaldamez/crumb/tree/main/mcp",
+    "changelog_uri"         => "https://github.com/nicogaldamez/crumb/blob/main/mcp/CHANGELOG.md",
+    "rubygems_mfa_required" => "true"
+  }
+
+  spec.files         = Dir["{lib,exe}/**/*"] + [ "README.md", "LICENSE" ]
   spec.bindir        = "exe"
   spec.executables   = [ "crumb-mcp" ]
   spec.require_paths = [ "lib" ]
 
-  spec.add_dependency "mcp",    ">= 0.8.0"
-  spec.add_dependency "faraday", ">= 2.0"
+  spec.add_dependency "mcp",     "~> 0.8", ">= 0.8.0"
+  spec.add_dependency "faraday", "~> 2.0"
 end

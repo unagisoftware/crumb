@@ -35,7 +35,7 @@ module Crumb
             lines << ""
             lines << "Commits (#{Array(d["commits"]).size}):"
             Array(d["commits"]).each do |c|
-              lines << "  #{c["sha"][0, 8]} #{c["author"]} — #{c["message"]}"
+              lines << "  #{c["sha"].to_s[0, 8]} #{c["author"]} — #{c["message"]}"
             end
             lines << ""
             lines << "Changed files (#{Array(d["changed_files"]).size}):"

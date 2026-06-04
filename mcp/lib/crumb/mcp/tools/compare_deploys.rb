@@ -26,7 +26,7 @@ module Crumb
 
             text = "Comparison between deploy ##{from_id} and ##{to_id} on #{endpoint}\n\n"
             text += "Commits (#{all_commits.size} unique):\n"
-            all_commits.each { |c| text += "  #{c["sha"][0, 8]} #{c["author"]} — #{c["message"]}\n" }
+            all_commits.each { |c| text += "  #{c["sha"].to_s[0, 8]} #{c["author"]} — #{c["message"]}\n" }
             text += "\nChanged files (#{all_files.size} unique):\n"
             all_files.each { |f| text += "  #{f["change_type"]} #{f["path"]}\n" }
 

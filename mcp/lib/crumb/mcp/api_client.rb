@@ -45,12 +45,25 @@ module Crumb
 
       private
 
+      OPEN_TIMEOUT = 5
+      READ_TIMEOUT = 15
+
       def get(path)
-        response = Faraday.get("#{@base_url}#{path}", nil,
-          "Authorization" => "Bearer #{@token}",
-          "Accept"        => "application/json")
+        response = connection.get("#{@base_url}#{path}") do |req|
+          req.headers["Authorization"] = "Bearer #{@token}"
+          req.headers["Accept"]        = "application/json"
+        end
         raise Error, "HTTP #{response.status} from #{@slug}" unless response.status == 200
         JSON.parse(response.body)
+      rescue Faraday::Error => e
+        raise Error, "Request to #{@slug} failed: #{e.message}"
+      end
+
+      def connection
+        @connection ||= Faraday.new do |f|
+          f.options.open_timeout = OPEN_TIMEOUT
+          f.options.timeout      = READ_TIMEOUT
+        end
       end
     end
   end

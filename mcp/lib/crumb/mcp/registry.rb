@@ -7,11 +7,11 @@ module Crumb
 
       class << self
         def all_slugs
-          config["endpoints"].keys
+          endpoints.keys
         end
 
         def endpoint_for(slug)
-          ep = config["endpoints"][slug]
+          ep = endpoints[slug]
           raise ArgumentError, "Unknown Crumb endpoint: #{slug}" unless ep
           {
             base_url:  ep["base_url"],
@@ -21,6 +21,11 @@ module Crumb
         end
 
         private
+
+        def endpoints
+          config["endpoints"] or
+            raise "No 'endpoints' key found in #{CONFIG_PATH}"
+        end
 
         def config
           @config ||= begin
