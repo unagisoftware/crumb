@@ -7,6 +7,8 @@ questions about your deploys: what shipped, when, by whom, and which files chang
 Each developer runs this locally. It talks to the read API exposed by the
 [`crumb` engine](../engine) mounted in your apps, authenticating with a read token.
 
+For how the server is built and works internally, see [ARCHITECTURE.md](ARCHITECTURE.md).
+
 ## Installation
 
 Install the gem from RubyGems — no clone needed:
