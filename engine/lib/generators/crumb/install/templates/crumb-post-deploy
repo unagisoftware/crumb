@@ -17,26 +17,54 @@ if [[ "$KAMAL_COMMAND" == "rollback" ]]; then
   KIND="rollback"
 else
   KIND="deploy"
-  if [[ -n "$PREVIOUS_SHA" && "$PREVIOUS_SHA" != "$KAMAL_VERSION" ]]; then
-    COMMITS=$(git log --format='{"sha":"%H","author":"%ae","message":"%s","committed_at":"%aI"}' \
-              "${PREVIOUS_SHA}..${KAMAL_VERSION}" \
-      | ruby -e 'lines=($stdin.read.strip.split("\n")); puts "["+lines.join(",")+"]"')
-    CHANGED_FILES=$(git diff --name-status "${PREVIOUS_SHA}..${KAMAL_VERSION}" \
-      | ruby -e '
-          rows = $stdin.read.strip.lines.map do |line|
-            t, p = line.chomp.split("\t", 2)
-            "{\"path\":\"#{p}\",\"change_type\":\"#{t[0]}\"}"
+  COMMITS="[]"
+  CHANGED_FILES="[]"
+  # Enrich with the commit range only when both endpoints are real, reachable
+  # commits. A dirty deploy makes KAMAL_VERSION a "<sha>_uncommitted_<hash>"
+  # pseudo-ref, and PREVIOUS_SHA may not exist on this machine — either way the
+  # range is invalid and git errors out. Never let that abort the hook: closing
+  # the deploy (the PATCH below) matters far more than the commit list, and with
+  # `set -e` a failed substitution would otherwise leave the deploy stuck running.
+  if [[ -n "$PREVIOUS_SHA" && "$PREVIOUS_SHA" != "$KAMAL_VERSION" ]] \
+     && git rev-parse -q --verify "${PREVIOUS_SHA}^{commit}" >/dev/null 2>&1 \
+     && git rev-parse -q --verify "${KAMAL_VERSION}^{commit}" >/dev/null 2>&1; then
+    # Read raw, NUL/unit-separated git fields and let Ruby's JSON.generate do the
+    # escaping. Interpolating %s straight into JSON breaks the body whenever a
+    # commit message (or path) contains a quote, backslash, or control char,
+    # which makes the PATCH below 400 and leaves the deploy stuck running.
+    COMMITS=$(git log -z --format='%H%x1f%ae%x1f%s%x1f%aI' "${PREVIOUS_SHA}..${KAMAL_VERSION}" \
+      | ruby -rjson -e '
+          commits = $stdin.read.split("\x00").reject(&:empty?).map do |rec|
+            sha, author, message, committed_at = rec.split("\x1f", 4)
+            { sha: sha, author: author, message: message, committed_at: committed_at }
           end
-          puts "[" + rows.join(",") + "]"
-        ')
-  else
-    COMMITS="[]"
-    CHANGED_FILES="[]"
+          print JSON.generate(commits)
+        ') || COMMITS="[]"
+    CHANGED_FILES=$(git diff -z --name-status "${PREVIOUS_SHA}..${KAMAL_VERSION}" \
+      | ruby -rjson -e '
+          toks = $stdin.read.split("\x00")
+          toks.pop while !toks.empty? && toks.last == ""
+          files = []; i = 0
+          while i < toks.length
+            status = toks[i]; i += 1
+            i += 1 if status =~ /\A[RC]/   # renames/copies emit the source path first
+            path = toks[i]; i += 1
+            files << { path: path, change_type: status[0] } if path
+          end
+          print JSON.generate(files)
+        ') || CHANGED_FILES="[]"
   fi
 fi
 
-curl -sf -X PATCH "$CRUMB_API_URL/deploys/$DEPLOY_ID" \
+BODY="{\"status\":\"success\",\"kind\":\"$KIND\",\"finished_at\":\"$KAMAL_RECORDED_AT\",\"duration_seconds\":$KAMAL_RUNTIME,\"commits\":$COMMITS,\"changed_files\":$CHANGED_FILES,\"metadata\":{\"kamal_command\":\"$KAMAL_COMMAND\",\"hosts\":\"$KAMAL_HOSTS\"}}"
+
+# Surface the HTTP status: a swallowed non-2xx (e.g. a 400 from a malformed body)
+# is exactly how a deploy ends up stuck in "running" with no trace in the logs.
+HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' -X PATCH "$CRUMB_API_URL/deploys/$DEPLOY_ID" \
   -H "Authorization: Bearer $CRUMB_INGEST_SECRET" \
   -H "Content-Type: application/json" \
-  -d "{\"status\":\"success\",\"kind\":\"$KIND\",\"finished_at\":\"$KAMAL_RECORDED_AT\",\"duration_seconds\":$KAMAL_RUNTIME,\"commits\":$COMMITS,\"changed_files\":$CHANGED_FILES,\"metadata\":{\"kamal_command\":\"$KAMAL_COMMAND\",\"hosts\":\"$KAMAL_HOSTS\"}}" 2>/dev/null \
-  || echo "Crumb: failed to close deploy record — skipping" >&2
+  -d "$BODY") || HTTP_CODE="000"
+
+if [[ "$HTTP_CODE" != 2* ]]; then
+  echo "Crumb: failed to close deploy $DEPLOY_ID (HTTP $HTTP_CODE) — left running" >&2
+fi
